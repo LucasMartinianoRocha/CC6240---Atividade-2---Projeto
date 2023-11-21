@@ -1,0 +1,12 @@
+db.createCollection("classrooms");
+db.createCollection("departments");
+db.createCollection("courses");
+db.createCollection("instructors");
+db.createCollection("sections");
+db.createCollection("teaches");
+db.createCollection("students");
+db.createCollection("takes");
+db.createCollection("advisors");
+db.createCollection("time_slots");
+db.createCollection("prereqs");
+

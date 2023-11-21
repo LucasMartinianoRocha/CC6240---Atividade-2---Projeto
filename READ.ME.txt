@@ -1,0 +1,5 @@
+DESCRIÇÃO:
+
+1. Primeiro passo: Rodar o DDL Table;
+2. Segundo passo: Rodar o insert DDL;
+3. Terceiro passo: Rodar o Selects.

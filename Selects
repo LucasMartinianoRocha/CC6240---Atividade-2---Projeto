@@ -1,0 +1,219 @@
+db.student.aggregate([
+  {
+    $lookup: {
+      from: "advisor",
+      localField: "ID",
+      foreignField: "s_ID",
+      as: "advisor_info"
+    }
+  },
+  { $unwind: "$advisor_info" },
+  {
+    $lookup: {
+      from: "instructor",
+      localField: "advisor_info.i_ID",
+      foreignField: "ID",
+      as: "instructor_info"
+    }
+  },
+  { $unwind: "$instructor_info" },
+  {
+    $lookup: {
+      from: "takes",
+      localField: "ID",
+      foreignField: "ID",
+      as: "takes_info"
+    }
+  },
+  { $unwind: "$takes_info" },
+  {
+    $lookup: {
+      from: "teaches",
+      localField: "instructor_info.ID",
+      foreignField: "ID",
+      as: "teaches_info"
+    }
+  },
+  { $unwind: "$teaches_info" },
+  {
+    $lookup: {
+      from: "course",
+      localField: "teaches_info.course_id",
+      foreignField: "course_id",
+      as: "course_info"
+    }
+  },
+  { $unwind: "$course_info" },
+  {
+    $match: {
+      $and: [
+        { "takes_info.course_id": "$teaches_info.course_id" },
+        { "takes_info.sec_id": "$teaches_info.sec_id" },
+        { "takes_info.semester": "$teaches_info.semester" },
+        { "takes_info.year": "$teaches_info.year" }
+      ]
+    }
+  },
+  {
+    $project: {
+      nome_estudante: "$name",
+      professor: "$instructor_info.name",
+      disciplina: "$course_info.title",
+      _id: 0
+    }
+  }
+]);
+
+
+
+
+
+
+
+
+
+
+
+
+db.instructor.aggregate([
+  {
+    $lookup: {
+      from: "teaches",
+      localField: "ID",
+      foreignField: "ID",
+      as: "teaches_info"
+    }
+  },
+  { $unwind: "$teaches_info" },
+  {
+    $lookup: {
+      from: "section",
+      let: {
+        course_id: "$teaches_info.course_id",
+        sec_id: "$teaches_info.sec_id",
+        semester: "$teaches_info.semester",
+        year: "$teaches_info.year"
+      },
+      pipeline: [
+        {
+          $match: {
+            $expr: {
+              $and: [
+                { $eq: ["$course_id", "$$course_id"] },
+                { $eq: ["$sec_id", "$$sec_id"] },
+                { $eq: ["$semester", "$$semester"] },
+                { $eq: ["$year", "$$year"] }
+              ]
+            }
+          }
+        }
+      ],
+      as: "section_info"
+    }
+  },
+  { $unwind: "$section_info" },
+  {
+    $lookup: {
+      from: "classroom",
+      localField: "section_info.building",
+      foreignField: "building",
+      as: "classroom_info"
+    }
+  },
+  { $unwind: "$classroom_info" },
+  {
+    $group: {
+      _id: {
+        professor: "$name",
+        building: "$classroom_info.building",
+        room_number: "$classroom_info.room_number"
+      },
+      professor: { $first: "$name" },
+      predio: { $first: "$classroom_info.building" },
+      sala: { $first: "$classroom_info.room_number" }
+    }
+  },
+  {
+    $sort: {
+      "professor": 1,
+      "predio": 1,
+      "sala": 1
+    }
+  },
+  {
+    $project: {
+      _id: 0,
+      professor: 1,
+      predio: 1,
+      sala: 1
+    }
+  }
+]);
+
+
+
+
+
+
+
+
+
+
+
+
+
+db.department.aggregate([
+  {
+    $lookup: {
+      from: "student",
+      localField: "dept_name",
+      foreignField: "dept_name",
+      as: "students"
+    }
+  },
+  {
+    $lookup: {
+      from: "instructor",
+      localField: "dept_name",
+      foreignField: "dept_name",
+      as: "instructors"
+    }
+  },
+  {
+    $unwind: {
+      path: "$students",
+      preserveNullAndEmptyArrays: true // equivalent to LEFT JOIN in SQL
+    }
+  },
+  {
+    $unwind: {
+      path: "$instructors",
+      preserveNullAndEmptyArrays: true // equivalent to LEFT JOIN in SQL
+    }
+  },
+  {
+    $group: {
+      _id: {
+        dept_name: "$dept_name",
+        budget: "$budget"
+      },
+      total_alunos: { $addToSet: "$students.ID" },
+      salario_medio: { $avg: "$instructors.salary" }
+    }
+  },
+  {
+    $project: {
+      _id: 0,
+      dept_name: "$_id.dept_name",
+      orcamento: "$_id.budget",
+      total_alunos: { $size: "$total_alunos" },
+      salario_medio: 1
+    }
+  },
+  {
+    $sort: {
+      dept_name: 1
+    }
+  }
+]);
+
